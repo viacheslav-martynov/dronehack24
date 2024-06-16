@@ -1,0 +1,10 @@
+onnx
+onnxsim
+pre-commit
+virtualenv
+ipdb
+monkeytype
+onnxruntime
+pandas
+onnxruntime-gpu
+tensorrt

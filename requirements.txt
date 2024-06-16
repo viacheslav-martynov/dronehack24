@@ -1,0 +1,8 @@
+ultralytics
+scikit-image
+fire
+streamlit
+pycocotools
+pandas
+streamlit-vis-timeline
+dill

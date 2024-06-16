@@ -1,0 +1,15 @@
+8s_1280_batch10_hd+hadclean:
+    model_type : 'yolov8'
+    checkpoint : 'models/8s_1280_batch10_hd+hadclean.pt'
+    sahi : True
+    sahi_res : 1280
+640_8n_batch35_hdclean+sod+det:
+    model_type : 'yolov8'
+    checkpoint : 'models/640_8n_batch35_hdclean+sod+det.pt'
+    sahi : True
+    sahi_res : 640
+v8n_1280_augv2:
+    model_type : 'yolov8'
+    checkpoint : 'models/v8n_1280_augv2.pt'
+    sahi : True
+    sahi_res : 1280

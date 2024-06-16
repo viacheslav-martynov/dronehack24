@@ -1,0 +1,15 @@
+runs
+data
+demo_data
+yolov10
+/storage
+*.mp4
+*.npy
+/random
+*.zip
+/temp_archive
+/archive_labels
+/crops_hd
+/empty_images.txt
+*.pyc
+*.onnx
