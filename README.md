@@ -63,6 +63,11 @@ conda install --yes -c conda-forge opencv
 streamlit run src/app/app.py --server.enableXsrfProtection false
 ```
 
+Чтобы пробросить порт выполняем команду
+```bash
+ssh -NfL 8501:localhost:8501 usename@server_ip
+```
+
 ## Работаем с пользовательским интерфейсом
 
 Перед собой видите страницу, содержащую три основные секции:
