@@ -1,9 +1,3 @@
-# Ultralytics YOLO 🚀, AGPL-3.0 license
-"""
-Ultralytics Results, Boxes and Masks classes for handling inference results.
-
-Usage: See https://docs.ultralytics.com/modes/predict/
-"""
 import os
 import platform
 
@@ -14,7 +8,6 @@ from pathlib import Path
 import numpy as np
 import torch
 
-# Ultralytics YOLO 🚀, AGPL-3.0 license
 
 import contextlib
 import math
@@ -26,7 +19,6 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-# Ultralytics YOLO 🚀, AGPL-3.0 license
 
 import contextlib
 import math

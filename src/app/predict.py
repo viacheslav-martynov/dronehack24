@@ -24,10 +24,6 @@ def get_preds_dict_from_sahi(sahi_result):
     label indices are returned !
     """
     object_prediction_list = sahi_result.object_prediction_list
-    # try:
-    #     print(dir(object_prediction_list[0].bbox))
-    # except:
-    #     pass
     boxes = [list(object_prediction.bbox.to_xyxy()) for object_prediction in object_prediction_list]
     labels = [object_prediction.category.id for object_prediction in object_prediction_list]
     scores = [object_prediction.score.value for object_prediction in object_prediction_list]
@@ -67,232 +63,6 @@ def get_yolo_result(result_sahi, category_mapping):
         boxes=result_tensor)
     return yolo_result
 
-#
-# ------------class-based implementation-------------
-# ---------------------buggy-------------------------
-#
-
-# class GenericModel:
-#     """
-#     Generic class for model inference.
-#     It's prediction methods return fixed structure regardless
-#     the used model and inference method (sahi, non-sahi).
-#     Output structure is following:
-#     --------
-#      * TBD
-#     --------
-#     """
-#     def __init__(
-#             self,
-#             model_type: str,
-#             weights_path: str,
-#             confidence_threshold: float = 0.25,
-#             device: str = 'cpu', 
-#     ):
-#         if model_type == 'yolov8':
-#             self.detection_model = AutoDetectionModel.from_pretrained(
-#                 model_type="yolov8",
-#                 model_path=weights_path,
-#                 confidence_threshold=confidence_threshold,
-#                 device=device,  # or 'cuda:0'
-#             )
-#         elif model_type == 'yolov10':
-#             self.detection_model = AutoDetectionModel.from_pretrained(
-#                 model_type="yolov10",
-#                 model_path=weights_path,
-#                 confidence_threshold=confidence_threshold,
-#                 device=device,
-#         )
-#         else:
-#             raise NotImplementedError
-
-#         self.category_mapping = dict(
-#                 zip(
-#                     list(map(int, self.detection_model.category_mapping.keys())),
-#                     self.detection_model.category_mapping.values(),
-#                 )
-#             )
-
-#     def predict_sahi_frame(self, image: Image, slice_height=1280, slice_width=1280):
-#         result_sahi = get_sliced_prediction(
-#             image,
-#             self.detection_model,
-#             slice_height=slice_height,
-#             slice_width=slice_width,
-#             overlap_height_ratio=0.2,
-#             overlap_width_ratio=0.2,
-#             verbose=False,
-#         )
-#         return get_yolo_result(result_sahi, self.detection_model.category_mapping)
-
-#     def predict_sahi_video(
-#             self,
-#             video_path,
-#             should_save_preds=False,
-#             should_save_video=True,
-#             save_filename='pred.mp4',
-#             slice_height=1280, slice_width=1280
-#         ):
-        
-#         # TODO нужно ли хранить предсказания с кадров??? они занимают место в памяти ;(
-#         # по факту, сценарий использования метода - вызвал, сохранил видео, предикты с видео - не нужны.
-        
-#         vidcap = cv2.VideoCapture(video_path)
-
-#         fps = vidcap.get(cv2.CAP_PROP_FPS)
-#         width  = vidcap.get(cv2.CAP_PROP_FRAME_WIDTH)
-#         height = vidcap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-
-#         if should_save_video:
-#             fourcc = cv2.VideoWriter_fourcc(*'MP4V')
-#             output = cv2.VideoWriter(save_filename, fourcc, fps,(int(width),int(height)))
-
-#         results_yolo = []
-
-#         ret, image = vidcap.read()
-
-#         result_sahi = get_sliced_prediction(
-#                 image,
-#                 self.detection_model,
-#                 slice_height=slice_height,
-#                 slice_width=slice_width,
-#                 overlap_height_ratio=0.2,
-#                 overlap_width_ratio=0.2,
-#                 verbose=False,
-#             )
-
-#         result_yolo = get_yolo_result(result_sahi, self.detection_model.category_mapping)
-#         if should_save_preds:
-#             results_yolo.append(result_yolo)
-
-#         if should_save_video:
-#             output.write(result_yolo.plot())
-
-#         while (vidcap.isOpened()):
-#             ret, image = vidcap.read()
-#             if ret:
-#                 result_sahi = get_sliced_prediction(
-#                     image,
-#                     self.detection_model,
-#                     slice_height=slice_height,
-#                     slice_width=slice_width,
-#                     overlap_height_ratio=0.2,
-#                     overlap_width_ratio=0.2,
-#                     verbose=False,
-#                 )
-                
-#                 result_yolo = get_yolo_result(result_sahi, self.detection_model.category_mapping)
-#                 if should_save_preds:
-#                     results_yolo.append(result_yolo)
-                    
-#                 if should_save_video:
-#                     output.write(result_yolo.plot())
-#         output.release()  
-#         vidcap.release()
-#         return results_yolo
-
-# class Inferencer:
-#     """
-#     Class to do inference on images and videos with any kind of model
-#     """
-
-#     def __init__(self,
-#                  model,
-#                  slice_height = 1280,
-#                  slice_width = 1250,
-#                  overlap = 0.2):
-#         self.model = model
-#         self.slice_height = slice_height
-#         self.slice_width = slice_width
-#         self.overlap = overlap
-
-#     @staticmethod
-#     def _transform_sahi_result(sahi_result):
-#         ...
-
-
-#     def predict_sahi_frame(self, image: Image):
-#         result_sahi = get_sliced_prediction(
-#             image,
-#             self.model.model,
-#             slice_height=self.slice_height,
-#             slice_width=self.slice_width,
-#             overlap_height_ratio=0.2,
-#             overlap_width_ratio=0.2,
-#             verbose=False,
-#         )
-#         return get_yolo_result(result_sahi, self.model.category_mapping)
-
-#     def predict_sahi_video(
-#             self,
-#             video_path,
-#             should_save_preds=False,
-#             should_save_video=True,
-#             save_filename='pred.mp4',
-
-#         ):
-        
-#         # TODO нужно ли хранить предсказания с кадров??? они занимают место в памяти ;(
-#         # по факту, сценарий использования метода - вызвал, сохранил видео, предикты с видео - не нужны.
-        
-#         vidcap = cv2.VideoCapture(video_path)
-
-#         fps = vidcap.get(cv2.CAP_PROP_FPS)
-#         width  = vidcap.get(cv2.CAP_PROP_FRAME_WIDTH)
-#         height = vidcap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-
-#         if should_save_video:
-#             fourcc = cv2.VideoWriter_fourcc(*'MP4V')
-#             output = cv2.VideoWriter(save_filename, fourcc, fps,(int(width),int(height)))
-
-#         results_yolo = []
-
-#         ret, image = vidcap.read()
-
-#         result_sahi = get_sliced_prediction(
-#                 image,
-#                 self.model.model,
-#                 slice_height=self.slice_height,
-#                 slice_width=self.slice_width,
-#                 overlap_height_ratio=0.2,
-#                 overlap_width_ratio=0.2,
-#                 verbose=False,
-#             )
-
-#         result_yolo = get_yolo_result(result_sahi, self.model.category_mapping)
-#         if should_save_preds:
-#             results_yolo.append(result_yolo)
-
-#         if should_save_video:
-#             output.write(result_yolo.plot())
-
-#         while (vidcap.isOpened()):
-#             ret, image = vidcap.read()
-
-#             result_sahi = get_sliced_prediction(
-#                 image,
-#                 self.model.model,
-#                 slice_height=self.slice_height,
-#                 slice_width=self.slice_width,
-#                 overlap_height_ratio=0.2,
-#                 overlap_width_ratio=0.2,
-#                 verbose=False,
-#             )
-            
-#             result_yolo = get_yolo_result(result_sahi, self.model.category_mapping)
-#             if should_save_preds:
-#                 results_yolo.append(result_yolo)
-                
-#             if should_save_video:
-#                 output.write(result_yolo.plot())
-#         output.release()  
-#         vidcap.release()
-#         return results_yolo
-
-
-#
-# ------------func-based implementation-------------
-#
 
 def convert_category_keys(category_mapping):
     return dict(
@@ -304,7 +74,6 @@ def convert_category_keys(category_mapping):
 
 def update_timeline_data(result_sahi, timeline_data: dict):
     categories = set([object_prediction.category.id for object_prediction in result_sahi.object_prediction_list])
-    # print(categories)
     for category in timeline_data.keys():
         if category in categories:
             timeline_data[category].append(1)
@@ -313,10 +82,8 @@ def update_timeline_data(result_sahi, timeline_data: dict):
     return timeline_data
 
 def finalize_timeline_data(timeline_data: list, fps: float):
-    # 1. bfill/ffill array with ones when detection is found
     # TODO check how it works with the last element = 0 ([1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,1,0,0,1,0,1,0])
     for category in timeline_data.keys():
-        print(timeline_data[category])
         index = 0
         while index<len(timeline_data[category]):
             # if detection is found -> fill one second forward and backward
@@ -337,7 +104,6 @@ def finalize_timeline_data(timeline_data: list, fps: float):
     now = datetime.now()
     
     for category in timeline_data.keys():
-        # print(timeline_data[category])
         prev_value = 0
         item = {}
         for index, current_value in enumerate(timeline_data[category]):
@@ -448,12 +214,6 @@ def predict_video(
         fourcc = cv2.VideoWriter_fourcc(*'avc1')
         output = cv2.VideoWriter(save_filename, fourcc, fps,(int(width),int(height)))
 
-    # pred_timeline = dict(zip(
-    #     category_ids,
-    #     [[] for _ in len(category_ids)]
-    #     )
-    # )
-
     pred_timeline = {category_id: [] for category_id in category_ids}
     results_yolo = []
 
@@ -490,15 +250,22 @@ def predict_video(
     while ret:
         ret, image = vidcap.read()
         if ret:
-            result_sahi = get_sliced_prediction(
-                image,
-                detection_model,
-                slice_height=slice_height,
-                slice_width=slice_width,
-                overlap_height_ratio=0.2,
-                overlap_width_ratio=0.2,
-                verbose=False,
-            )
+            if sahi:
+                result_sahi = get_sliced_prediction(
+                    image,
+                    detection_model,
+                    slice_height=slice_height,
+                    slice_width=slice_width,
+                    overlap_height_ratio=0.2,
+                    overlap_width_ratio=0.2,
+                    verbose=False,
+                )
+            else:
+                result_sahi = get_prediction(
+                    image,
+                    detection_model,
+                    verbose=False,
+                )
             pred_timeline = update_timeline_data(result_sahi, pred_timeline)
             
             result_yolo = get_yolo_result(result_sahi, convert_category_keys(detection_model.category_mapping))
@@ -511,8 +278,6 @@ def predict_video(
     vidcap.release()
 
     timeline_items, start_timestamp = finalize_timeline_data(pred_timeline, fps)
-
-    print(timeline_items)
 
     return results_yolo, timeline_items, start_timestamp
 

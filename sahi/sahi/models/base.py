@@ -23,7 +23,8 @@ class DetectionModel:
         load_at_init: bool = True,
         image_size: int = None,
         agnostic_nms: bool = False,
-        augment: bool = False,
+        augment: bool = True,
+        iou: float = 0.45,
     ):
         """
         Init object detection/instance segmentation model.
@@ -60,6 +61,7 @@ class DetectionModel:
         self._object_prediction_list_per_image = None
         self.agnostic_nms = agnostic_nms
         self.augment = augment
+        self.iou = iou
 
         self.set_device()
 

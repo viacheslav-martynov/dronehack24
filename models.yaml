@@ -1,15 +1,18 @@
-8s_1280_batch10_hd+hadclean:
+Baseline:
     model_type : 'yolov8'
-    checkpoint : 'models/8s_1280_batch10_hd+hadclean.pt'
-    sahi : True
+    checkpoint : 'models/baseline.pt'
+    sahi : False
+    augment : False
     sahi_res : 1280
-640_8n_batch35_hdclean+sod+det:
+Baseline+TTA:
     model_type : 'yolov8'
-    checkpoint : 'models/640_8n_batch35_hdclean+sod+det.pt'
-    sahi : True
-    sahi_res : 640
-v8n_1280_augv2:
+    checkpoint : 'models/baseline.pt'
+    sahi : False
+    augment : True
+    sahi_res : 1280
+Baseline+TTA+SAHI:
     model_type : 'yolov8'
-    checkpoint : 'models/v8n_1280_augv2.pt'
+    checkpoint : 'models/baseline.pt'
     sahi : True
+    augment : True
     sahi_res : 1280

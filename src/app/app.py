@@ -7,6 +7,7 @@ import zipfile
 from datetime import datetime
 from streamlit_timeline import st_timeline
 from pathlib import Path
+import time
 
 from storage import (
     STORAGE_PATH,
@@ -40,12 +41,13 @@ def on_more_click(show_more, idx):
 def on_less_click(show_more, idx):
     show_more[idx] = False
 
-def get_model(model_type, checkpoint, confidence_threshold, device):
+def get_model(model_type, checkpoint, confidence_threshold, device, should_augment):
     return AutoDetectionModel.from_pretrained(
                 model_type=model_type,
                 model_path=checkpoint,
                 confidence_threshold=confidence_threshold,
                 device=device,
+                augment=should_augment,
                 agnostic_nms=True)
 
 def get_inference_func(task: str, should_use_sahi: bool):
@@ -78,69 +80,28 @@ def init_session():
         st.session_state['model_info'] = get_model_info()
 
     if 'model' not in st.session_state:
-        # st.session_state['model'] = init_model(
-        #     model_type = 'yolov10',
-        #     weights_path = Path("/home/slava/LCT_24/src/utils/sasha/10s_1280.pt"),
-        #     confidence_threshold=0.25,
-        #     device='cuda:0')
         default_model_key = list(st.session_state['model_info'].keys())[0]
         st.session_state['model'] = AutoDetectionModel.from_pretrained(
                 model_type=st.session_state['model_info'][default_model_key]['model_type'],
                 model_path=st.session_state['model_info'][default_model_key]['checkpoint'],
                 confidence_threshold=0.25,
                 device='cuda',
+                augment=st.session_state['model_info'][default_model_key]['augment'],
                 agnostic_nms=True)
         st.session_state['should_use_sahi'] = st.session_state['model_info'][default_model_key]['sahi']
         st.session_state['sahi_res'] = st.session_state['model_info'][default_model_key]['sahi_res']
-        # st.session_state['model'].category_mapping = 
-
-# def get_detection_model():
-#     return AutoDetectionModel.from_pretrained(
-#                 model_type="yolov8",
-#                 model_path="/home/slava/LCT_24/runs/v8n_1280_baseline/weights/last.pt",
-#                 confidence_threshold=0.25,
-#                 device='cuda:0')
-
-# def init_model(model_type, weights_path, confidence_threshold, device):
-#     return GenericModel(model_type, weights_path, confidence_threshold, device)
 
 def display_player(container, start_timestamp, timeline, video_bytes):
     if timeline is None:
         container.video(video_bytes) #displaying the video
     else:
         datetime_at_timeline = datetime.strptime(timeline['start'], "%Y/%m/%d %H:%M:%S")
-        # print(datetime_at_timeline)
-        # print(start_timestamp)
         start_time = int((datetime_at_timeline - start_timestamp).total_seconds())+4
-        print("start_time", start_time)
-        # container.video(video_bytes, start_time=start_time) #displaying the video
-        moment = int(timeline['content'])
-        print("moment", moment)
         container.video(video_bytes, start_time=start_time) #displaying the video
 
 def display_timeline(container, items, **kwargs):
     with container:
-        # items = [
-        #     {"id": 1, "content": "2022-10-20", "start": "2022-10-20 10:00:00"},
-        #     {"id": 2, "content": "2022-10-09", "start": "2022-10-09 20:00:00"},
-        #     {"id": 3, "content": "2022-10-18", "start": "2022-10-18 00:00:00"},
-        #     {"id": 4, "content": "2022-10-16", "start": "2022-10-16 15:00:00"},
-        #     {"id": 5, "content": "2022-10-25", "start": "2022-10-25"},
-        #     {"id": 6, "content": "2022-10-27", "start": "2022-10-27"},
-        # ]
-        # items = [
-        #     {"id": 1, "content": '1', "start": "00012", "end": "00041"},
-        #     {"id": 2, "content": '2', "start": "00024", "end": "000504"},
-        #     {"id": 3, "content": '3', "start": "00036"},
-        #     {"id": 4, "content": '4', "start": "00048"},
-        #     {"id": 5, "content": '5', "start": "00059"},
-        #     {"id": 6, "content": '6', "start": "000600"},
-        # ]
-        # items = [{'id': 0, 'content': '0', 'start': '0002', 'end': '0006'}, {'id': 1, 'content': '0', 'start': '0007', 'end': '0009'}, {'id': 2, 'content': '0', 'start': '00010', 'end': '00012'}, {'id': 3, 'content': '0', 'start': '00012', 'end': '00014'}, {'id': 4, 'content': '0', 'start': '00039', 'end': '00043'}, {'id': 5, 'content': '1', 'start': '00010', 'end': '00015'}, {'id': 6, 'content': '1', 'start': '00025', 'end': '00027'}, {'id': 7, 'content': '1', 'start': '00039', 'end': '00043'}, {'id': 8, 'content': '1', 'start': '00057', 'end': '00059'}, {'id': 9, 'content': '4', 'start': '0001', 'end': '0003'}, {'id': 10, 'content': '4', 'start': '00020', 'end': '00023'}, {'id': 11, 'content': '4', 'start': '00030', 'end': '00032'}, {'id': 12, 'content': '4', 'start': '00042', 'end': '00044'}]
         timeline = st_timeline(items, groups=[], options={}, height="300px", **kwargs)
-        # st.subheader("Selected item")
-        # st.write(timeline)
-
         st.session_state['timeline'] = timeline
 
 @st.cache_data(show_spinner='Подождите, ваше видео обрабатывается...')
@@ -149,11 +110,9 @@ def process_video():
     filename = st.session_state['uploaded_file'].name
     st.text(filename)
 
-    print ('saving video bytes')
-
     save_video_bytes(video_bytes, 'temp.mp4')
 
-    print ('processing video')
+    t1 = time.time()
     results_yolo, timeline_items, start_timestamp = predict_video(
         st.session_state['model'],
         'temp.mp4',
@@ -161,20 +120,19 @@ def process_video():
         slice_height=st.session_state['sahi_res'],
         slice_width=st.session_state['sahi_res'],
         save_filename='pred.mp4')
-
-    print ('done processing video')
+    t2= time.time()
+    elapsed_time = t2-t1
     processed_video_bytes = read_video_bytes('pred.mp4')
-    return processed_video_bytes, timeline_items, start_timestamp
+    return processed_video_bytes, timeline_items, start_timestamp, elapsed_time
 
 
 @st.cache_data(show_spinner='Подождите, ваш архив обрабатывается...')
 def process_image_archive():
-    # archive_bytes = st.session_state['uploaded_file'].getvalue()
     shutil.rmtree('temp_archive', ignore_errors=True)
     os.makedirs('temp_archive', exist_ok=True)
     with zipfile.ZipFile(st.session_state['uploaded_file'], "r") as z:
         z.extractall("temp_archive")
-    images_dir = Path("temp_archive")#, Path(st.session_state['uploaded_file'].name).stem)
+    images_dir = Path("temp_archive")
     predict_image_directory(
         detection_model = st.session_state['model'],
         image_dir = images_dir,
@@ -215,6 +173,7 @@ def main():
             checkpoint=st.session_state['model_info'][model_name_option]['checkpoint'],
             confidence_threshold=confidence_threshold,
             device='cuda',
+            should_augment=st.session_state['model_info'][model_name_option]['augment'],
         )
 
         st.session_state['should_use_sahi'] = st.session_state['model_info'][model_name_option]['sahi']
@@ -242,7 +201,6 @@ def main():
                 pass
             case "Видео :movie_camera:":
                 if st.session_state['latest_loaded_video'] != st.session_state['uploaded_file']:
-                    ...
                     process_video.clear()
                     save_processed_video.clear()
                 st.session_state['latest_loaded_video'] = st.session_state['uploaded_file']
@@ -251,14 +209,13 @@ def main():
                         process_video.clear()
                         save_processed_video.clear()
                         # To read file as bytes:
-                        video_bytes, timeline_items, start_timestamp = process_video() # TODO return success
+                        video_bytes, timeline_items, start_timestamp, elapsed_time = process_video() # TODO return success
                         
                         # if success process
                         save_processed_video(timeline_items, model_name_option, confidence_threshold, start_timestamp)
-                        player = st.container()
-                        timeline_container = st.container()
-                        display_timeline(timeline_container, timeline_items)
-                        display_player(player, start_timestamp, st.session_state['timeline'], 'pred.mp4')
+
+                        st.text("Видео обработано. Просмотрите его в секции ниже.")
+                        st.text(f"Время обработки нейросетью {elapsed_time} сек.")
             case "Архив фото :package:":
                 if st.session_state['latest_loaded_archive'] != st.session_state['uploaded_file']:
                     process_image_archive.clear()
@@ -273,7 +230,6 @@ def main():
                             st.download_button('Скачать архив с предсказаниями', data_bytes, result_filename)
             case _:
                 pass
-        # if st.session_state['source_type'] is not None:
             
 
     # Историческая секция
@@ -314,7 +270,6 @@ def main():
                     ":tv:", key=str(experiment) + "_", on_click=on_less_click, args=[show_more, experiment]
                 )
 
-                # do stuff
                 video_timeline = read_video_timeline(filenames[experiment])
                 history_player = st.container()
                 history_timeline_container = st.container()
@@ -323,7 +278,6 @@ def main():
                     history_player,
                     datetime.strptime(datetime_record, "%d/%m/%Y %H:%M:%S"),
                     st.session_state['timeline'],
-                    # 'temp.mp4'
                     str(Path(STORAGE_PATH, 'videos', filenames[experiment]))
                     )
             else:

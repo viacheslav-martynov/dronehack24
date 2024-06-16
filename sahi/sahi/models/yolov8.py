@@ -70,7 +70,8 @@ class Yolov8DetectionModel(DetectionModel):
                   "conf": self.confidence_threshold,
                   "device": self.device,
                   "agnostic_nms": self.agnostic_nms,
-                  "augment": self.augment}
+                  "augment": self.augment,
+                  'iou' : self.iou}
 
         if self.image_size is not None:
             kwargs = {"imgsz": self.image_size, **kwargs}
