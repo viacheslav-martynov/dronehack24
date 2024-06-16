@@ -60,7 +60,7 @@ conda install --yes -c conda-forge opencv
 
 Запуск осуществляется командой
 ```bash
-streamlit run src/app/app.py --server.enableXsrfProtection false
+streamlit run src/app/app.py
 ```
 
 ### Пробросим порт на машину клиента
