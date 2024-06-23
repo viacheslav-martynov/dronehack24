@@ -16,3 +16,10 @@ Baseline+TTA+SAHI:
     sahi : True
     augment : True
     sahi_res : 1280
+Baseline+TTA+classifier:
+    model_type : 'yolov8'
+    checkpoint : 'models/baseline.pt'
+    sahi : True
+    sahi_res : 1280
+    classifier_type: 'resnet14t'
+    classifier_checkpoint: '/home/slava/nkb-classification/runs/train_lct_drones/best.pth'

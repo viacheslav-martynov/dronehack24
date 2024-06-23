@@ -8,6 +8,7 @@ from datetime import datetime
 from streamlit_timeline import st_timeline
 from pathlib import Path
 import time
+from my_classificationlib.model import get_model as get_classification_model
 
 from storage import (
     STORAGE_PATH,
@@ -41,10 +42,10 @@ def on_more_click(show_more, idx):
 def on_less_click(show_more, idx):
     show_more[idx] = False
 
-def get_model(model_type, checkpoint, confidence_threshold, device, should_augment):
+def get_detector_model(detector_model_type, detector_checkpoint, confidence_threshold, device, should_augment):
     return AutoDetectionModel.from_pretrained(
-                model_type=model_type,
-                model_path=checkpoint,
+                model_type=detector_model_type,
+                model_path=detector_checkpoint,
                 confidence_threshold=confidence_threshold,
                 device=device,
                 augment=should_augment,
@@ -81,13 +82,32 @@ def init_session():
 
     if 'model' not in st.session_state:
         default_model_key = list(st.session_state['model_info'].keys())[0]
-        st.session_state['model'] = AutoDetectionModel.from_pretrained(
-                model_type=st.session_state['model_info'][default_model_key]['model_type'],
-                model_path=st.session_state['model_info'][default_model_key]['checkpoint'],
+        st.session_state['detector_model'] = get_detector_model(
+                detector_model_type=st.session_state['model_info'][default_model_key]['model_type'],
+                detector_checkpoint=st.session_state['model_info'][default_model_key]['checkpoint'],
                 confidence_threshold=0.25,
                 device='cuda',
-                augment=st.session_state['model_info'][default_model_key]['augment'],
-                agnostic_nms=True)
+                should_augment=st.session_state['model_info'][default_model_key]['augment']
+        )
+
+        if 'classifier_checkpoint' in st.session_state['model_info'][default_model_key]:
+                
+            st.session_state['classifier_model'] = get_classification_model(
+                            {
+                "task": 'single',
+                "model": st.session_state['model_info'][default_model_key]['classifier_type'],
+                "pretrained": False,
+                "backbone_dropout": 0.1,
+                "classifier_dropout": 0.1,
+                "classifier_initialization": "kaiming_normal_",
+                'checkpoint' : st.session_state['model_info'][default_model_key]['classifier_checkpoint'],
+                },
+                classes=[0,1,2,3,4],
+                device='cuda',
+            )
+            st.session_state['classifier_model'].eval()
+        else: 
+            st.session_state['classifier_model'] = None
         st.session_state['should_use_sahi'] = st.session_state['model_info'][default_model_key]['sahi']
         st.session_state['sahi_res'] = st.session_state['model_info'][default_model_key]['sahi_res']
 
@@ -119,7 +139,9 @@ def process_video():
         sahi=st.session_state['should_use_sahi'],
         slice_height=st.session_state['sahi_res'],
         slice_width=st.session_state['sahi_res'],
-        save_filename='pred.mp4')
+        save_filename='pred.mp4',
+        classifier_model=st.session_state['classifier_model'],
+        )
     t2= time.time()
     elapsed_time = t2-t1
     processed_video_bytes = read_video_bytes('pred.mp4')
@@ -134,7 +156,7 @@ def process_image_archive():
         z.extractall("temp_archive")
     images_dir = Path("temp_archive")
     predict_image_directory(
-        detection_model = st.session_state['model'],
+        detection_model = st.session_state['detector_model'],
         image_dir = images_dir,
         sahi = False,
         should_save_preds = True,
@@ -168,16 +190,37 @@ def main():
         
         confidence_threshold = st.slider("Порог уверенности", min_value=0.1, max_value=1., step=0.05, value=0.25)
 
-        st.session_state['model'] = get_model(
-            model_type=st.session_state['model_info'][model_name_option]['model_type'],
-            checkpoint=st.session_state['model_info'][model_name_option]['checkpoint'],
+        st.session_state['detector_model'] = get_detector_model(
+            detector_model_type=st.session_state['model_info'][model_name_option]['model_type'],
+            detector_checkpoint=st.session_state['model_info'][model_name_option]['checkpoint'],
             confidence_threshold=confidence_threshold,
             device='cuda',
             should_augment=st.session_state['model_info'][model_name_option]['augment'],
         )
 
+        if 'classifier_checkpoint' in st.session_state['model_info'][model_name_option]:
+                    
+            st.session_state['classifier_model'] = get_classification_model(
+                            {
+                "task": 'single',
+                "model": st.session_state['model_info'][model_name_option]['classifier_type'],
+                "pretrained": True,
+                "backbone_dropout": 0.1,
+                "classifier_dropout": 0.1,
+                "classifier_initialization": "kaiming_normal_",
+                'checkpoint' : st.session_state['model_info'][model_name_option]['classifier_checkpoint'],
+                },
+                classes=[0,1,2,3,4],
+                device='cuda',
+            )
+            st.session_state['classifier_model'].eval()
+        else: 
+            st.session_state['classifier_model'] = None
+
         st.session_state['should_use_sahi'] = st.session_state['model_info'][model_name_option]['sahi']
         st.session_state['sahi_res'] = st.session_state['model_info'][model_name_option]['sahi_res']
+
+
 
         st.button('Очистить хранилище',
                   help="Очищает хранилище",

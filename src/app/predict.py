@@ -14,7 +14,84 @@ from PIL import Image
 from sahi.predict import get_prediction, get_sliced_prediction, predict
 from results import Results
 from pathlib import Path
+from my_classificationlib.dataset import Transforms
 # from ultralytics.engine.results import Results
+
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
+
+CLASSIFICATION_IMAGE_SIZE = 224
+inference_pipeline = A.Compose(
+    [
+        A.LongestMaxSize(CLASSIFICATION_IMAGE_SIZE, always_apply=True),
+        A.PadIfNeeded(
+            CLASSIFICATION_IMAGE_SIZE,
+            CLASSIFICATION_IMAGE_SIZE,
+            always_apply=True,
+            # border_mode=cv2.BORDER_CONSTANT,
+        ),
+        A.Normalize(
+            mean=(0.485, 0.456, 0.406),
+            std=(0.229, 0.224, 0.225),
+        ),
+        ToTensorV2(),
+    ]
+)
+transform = Transforms(inference_pipeline)
+
+
+def get_crops_fromarray(raw_image, boxes: torch.Tensor, transform):
+    """
+    Crops images from original image represented as a numpy array
+    Returns a torch.Tensor.
+    """
+    crops = []
+    for box in boxes:
+        crop = raw_image[int(box[1]):int(box[3]), int(box[0]):int(box[2]),:]
+        crops.append(transform(crop))
+    return torch.stack(crops)
+
+def get_crops_frompil(raw_image, boxes: torch.Tensor, transform):
+    """
+    Crops images from original image represented as a pillow Image
+    Returns a torch.Tensor.
+    """
+    crops = []
+    for box in boxes:
+        crop = raw_image.crop(list(map(int, box)))
+        crops.append(transform(crop))
+    if len(crops) > 0:
+        return torch.stack(crops)
+    else:
+        return torch.Tensor([])
+
+
+def predict_classifier(raw_image,
+                       boxes: torch.Tensor,
+                       classifier_model: torch.nn.Module,
+                       transform,
+                       device):
+    """
+    boxes : 2D tensor of shape [2, num_boxes] - pixel xyxy format
+    """
+    # Get crops from prediction
+    with torch.no_grad():
+        if type(raw_image) is np.ndarray:
+            crops = get_crops_fromarray(raw_image, boxes, transform)
+        else:
+            crops = get_crops_frompil(raw_image, boxes, transform)
+        # predict with model
+        crops = crops.to(torch.device(device))
+        pred = classifier_model(crops)
+
+        classes = (
+            pred.softmax(dim=-1)
+            .argmax(dim=1)
+            .cpu()
+            .numpy()
+            .tolist()
+        )
+    return classes
 
 
 def get_preds_dict_from_sahi(sahi_result):
@@ -197,7 +274,9 @@ def predict_video(
         should_save_preds=False,
         should_save_video=True,
         save_filename='pred.mp4',
-        slice_height=1280, slice_width=1280
+        slice_height=1280, slice_width=1280,
+        classifier_model = None,
+        orig_size = True,
     ):
     
     # TODO нужно ли хранить предсказания с кадров??? они занимают место в памяти ;(
@@ -210,9 +289,18 @@ def predict_video(
     width  = vidcap.get(cv2.CAP_PROP_FRAME_WIDTH)
     height = vidcap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
+    if orig_size:
+        detection_model.image_size = int(max(width, height))
+
     if should_save_video:
         fourcc = cv2.VideoWriter_fourcc(*'avc1')
         output = cv2.VideoWriter(save_filename, fourcc, fps,(int(width),int(height)))
+
+    # pred_timeline = dict(zip(
+    #     category_ids,
+    #     [[] for _ in len(category_ids)]
+    #     )
+    # )
 
     pred_timeline = {category_id: [] for category_id in category_ids}
     results_yolo = []
@@ -235,6 +323,17 @@ def predict_video(
             detection_model,
             verbose=False,
         )
+    pred = get_preds_dict_from_sahi(result_sahi)
+    ### Optional stage to predict class with a classifier
+    if (classifier_model is not None) & (pred['boxes'].shape!=torch.Size([0])):
+        labels_from_classifier = predict_classifier(
+            image,
+            pred['boxes'],
+            classifier_model,
+            transform,
+            device='cuda')
+        for i, label_from_classifier in enumerate(labels_from_classifier):
+            result_sahi.object_prediction_list[i].category.id = int(label_from_classifier)
 
     result_yolo = get_yolo_result(result_sahi, convert_category_keys(detection_model.category_mapping))
     
@@ -267,7 +366,18 @@ def predict_video(
                     verbose=False,
                 )
             pred_timeline = update_timeline_data(result_sahi, pred_timeline)
-            
+            pred = get_preds_dict_from_sahi(result_sahi)
+            ### Optional stage to predict class with a classifier
+            if (classifier_model is not None) & (pred['boxes'].shape!=torch.Size([0])):
+                labels_from_classifier = predict_classifier(
+                    image,
+                    pred['boxes'],
+                    classifier_model,
+                    transform,
+                    device='cuda')
+                for i, label_from_classifier in enumerate(labels_from_classifier):
+                    result_sahi.object_prediction_list[i].category.id = int(label_from_classifier)
+                    
             result_yolo = get_yolo_result(result_sahi, convert_category_keys(detection_model.category_mapping))
             if should_save_preds:
                 results_yolo.append(result_yolo)
