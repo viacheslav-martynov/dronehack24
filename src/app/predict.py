@@ -14,13 +14,28 @@ from PIL import Image
 from sahi.predict import get_prediction, get_sliced_prediction, predict
 from results import Results
 from pathlib import Path
-from my_classificationlib.dataset import Transforms
 # from ultralytics.engine.results import Results
 
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
 CLASSIFICATION_IMAGE_SIZE = 224
+
+class Transforms:
+    def __init__(
+        self,
+        transforms: A.Compose,
+    ) -> None:
+        self.transforms = transforms
+
+    def __call__(
+        self,
+        img,
+        *args,
+        **kwargs,
+    ) -> torch.Tensor:
+        return self.transforms(image=np.array(img))["image"]
+
 inference_pipeline = A.Compose(
     [
         A.LongestMaxSize(CLASSIFICATION_IMAGE_SIZE, always_apply=True),
