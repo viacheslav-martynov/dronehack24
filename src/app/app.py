@@ -8,7 +8,6 @@ from datetime import datetime
 from streamlit_timeline import st_timeline
 from pathlib import Path
 import time
-from my_classificationlib.model import get_model as get_classification_model
 
 from storage import (
     STORAGE_PATH,
@@ -93,19 +92,10 @@ def init_session():
         )
 
         if 'classifier_checkpoint' in st.session_state['model_info'][default_model_key]:
-                
-            st.session_state['classifier_model'] = get_classification_model(
-                            {
-                "task": 'single',
-                "model": st.session_state['model_info'][default_model_key]['classifier_type'],
-                "pretrained": False,
-                "backbone_dropout": 0.1,
-                "classifier_dropout": 0.1,
-                "classifier_initialization": "kaiming_normal_",
-                'checkpoint' : st.session_state['model_info'][default_model_key]['classifier_checkpoint'],
-                },
-                classes=[0,1,2,3,4],
-                device='cuda',
+
+            st.session_state['classifier_model'] = torch.load(
+                st.session_state['model_info'][default_model_key]['classifier_checkpoint'],
+                map_location='cuda'
             )
             st.session_state['classifier_model'].eval()
         else: 
@@ -205,19 +195,10 @@ def main():
         )
 
         if 'classifier_checkpoint' in st.session_state['model_info'][model_name_option]:
-                    
-            st.session_state['classifier_model'] = get_classification_model(
-                            {
-                "task": 'single',
-                "model": st.session_state['model_info'][model_name_option]['classifier_type'],
-                "pretrained": True,
-                "backbone_dropout": 0.1,
-                "classifier_dropout": 0.1,
-                "classifier_initialization": "kaiming_normal_",
-                'checkpoint' : st.session_state['model_info'][model_name_option]['classifier_checkpoint'],
-                },
-                classes=[0,1,2,3,4],
-                device='cuda',
+
+            st.session_state['classifier_model'] = torch.load(
+                st.session_state['model_info'][model_name_option]['classifier_checkpoint'],
+                map_location='cuda'
             )
             st.session_state['classifier_model'].eval()
         else: 

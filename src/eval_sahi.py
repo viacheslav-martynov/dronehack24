@@ -22,9 +22,6 @@ from fire import Fire
 import time
 from pathlib import Path
 
-from my_classificationlib.model import get_model
-# from my_classificationlib.dataset import Transforms
-
 import albumentations as A
 import cv2
 from albumentations.pytorch import ToTensorV2
@@ -280,19 +277,7 @@ def process_weights(
     )
 
     if weights_classifier:
-        classifier_model = get_model(
-            {
-            "task": 'single',
-            "model": 'resnet14t',
-            "pretrained": True,
-            "backbone_dropout": 0.1,
-            "classifier_dropout": 0.1,
-            "classifier_initialization": "kaiming_normal_",
-            'checkpoint' : weights_classifier,
-            },
-            classes=[0,1,2,3,4],
-            device=device,
-        )
+        classifier_model = torch.load(weights_classifier, map_location=torch.device(device))
     else:
         classifier_model = None
 
