@@ -195,6 +195,8 @@ def main():
         )
 
         if 'classifier_checkpoint' in st.session_state['model_info'][model_name_option]:
+            st.text('* Не используйте модель \nBaseline+TTA+classifier для \nподсчета метрик и детекции \nна видео. Она загружена \nкак подтверждение проделанной \nработы, но лучший результат \nона не дает')
+
 
             st.session_state['classifier_model'] = torch.load(
                 st.session_state['model_info'][model_name_option]['classifier_checkpoint'],

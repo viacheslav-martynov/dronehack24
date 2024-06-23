@@ -76,7 +76,6 @@ class Yolov8DetectionModel(DetectionModel):
         if self.image_size is not None:
             kwargs = {"imgsz": self.image_size, **kwargs}
 
-        print(kwargs)
         prediction_result = self.model(image[:, :, ::-1], **kwargs)  # YOLOv8 expects numpy arrays to have BGR
 
         if self.has_mask:

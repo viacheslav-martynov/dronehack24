@@ -4,7 +4,6 @@ Baseline:
     sahi : False
     augment : False
     sahi_res : 1280
-    mixed_inf: True
 
 Baseline+TTA:
     model_type : 'yolov8'
@@ -12,7 +11,6 @@ Baseline+TTA:
     sahi : False
     augment : True
     sahi_res : 1280
-    mixed_inf: True
 
 Baseline+TTA+SAHI:
     model_type : 'yolov8'
@@ -20,14 +18,12 @@ Baseline+TTA+SAHI:
     sahi : True
     augment : True
     sahi_res : 1280
-    mixed_inf: True
 
-Baseline+TTA+classifier:
+Baseline+TTA+classifier*:
     model_type : 'yolov8'
     checkpoint : 'models/baseline.pt'
-    sahi : True
+    sahi : False
     augment : True
     sahi_res : 1280
     classifier_type: 'resnet14t'
-    classifier_checkpoint: '/home/slava/nkb-classification/runs/train_lct_drones/best.pth'
-    mixed_inf: True
+    classifier_checkpoint: 'models/classifier.jit.pt'

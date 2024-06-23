@@ -267,11 +267,12 @@ def predict_image_directory(
             if orig_size:
                 width, height = image.size
                 arg = int(max(width, height))
-                if arg > 1280 and arg <= 2560:
+                if arg > 1280 and arg <= 2048:
                     detection_model.image_size = arg
-                elif arg>2560:
-                    detection_model.image_size = 2560
-                
+                elif arg>2048:
+                    detection_model.image_size = 2048
+                else: 
+                    detection_model.image_size = 1280
             if sahi:
                 result_sahi = get_sliced_prediction(
                     image,
@@ -315,13 +316,15 @@ def predict_video(
     height = vidcap.get(cv2.CAP_PROP_FRAME_HEIGHT)
     if orig_size:
         arg = int(max(width, height))
-        if arg > 1600 and arg <= 2560:
+        if arg > 1280 and arg <= 2048:
             detection_model.image_size = arg
-        elif arg >= 2560:
-            detection_model.image_size = 2560
+        elif arg >= 2048:
+            detection_model.image_size = 2048
+        else: 
+            detection_model.image_size = 1280
             
     if should_save_video:
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        fourcc = cv2.VideoWriter_fourcc(*'avc1')
         output = cv2.VideoWriter(save_filename, fourcc, fps,(int(width),int(height)))
 
     # pred_timeline = dict(zip(
