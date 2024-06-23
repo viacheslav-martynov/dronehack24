@@ -43,6 +43,7 @@ def on_less_click(show_more, idx):
     show_more[idx] = False
 
 def get_detector_model(detector_model_type, detector_checkpoint, confidence_threshold, device, should_augment):
+    #print(detector_checkpoint)
     return AutoDetectionModel.from_pretrained(
                 model_type=detector_model_type,
                 model_path=detector_checkpoint,
@@ -67,6 +68,7 @@ def init_session():
         st.session_state['latest_loaded_image'] = None
         st.session_state['latest_loaded_video'] = None
         st.session_state['latest_loaded_archive'] = None
+        st.session_state['orig_size'] = True
 
     if 'timeline' not in st.session_state:
         st.session_state['timeline'] = None
@@ -108,8 +110,10 @@ def init_session():
             st.session_state['classifier_model'].eval()
         else: 
             st.session_state['classifier_model'] = None
+
         st.session_state['should_use_sahi'] = st.session_state['model_info'][default_model_key]['sahi']
         st.session_state['sahi_res'] = st.session_state['model_info'][default_model_key]['sahi_res']
+        # st.session_state['orig_size'] =  st.session_state['model_info'][default_model_key]['mixed_inf']
 
 def display_player(container, start_timestamp, timeline, video_bytes):
     if timeline is None:
@@ -134,13 +138,14 @@ def process_video():
 
     t1 = time.time()
     results_yolo, timeline_items, start_timestamp = predict_video(
-        st.session_state['model'],
+        st.session_state['detector_model'],
         'temp.mp4',
         sahi=st.session_state['should_use_sahi'],
         slice_height=st.session_state['sahi_res'],
         slice_width=st.session_state['sahi_res'],
         save_filename='pred.mp4',
         classifier_model=st.session_state['classifier_model'],
+        orig_size= st.session_state['orig_size']
         )
     t2= time.time()
     elapsed_time = t2-t1
@@ -161,6 +166,7 @@ def process_image_archive():
         sahi = False,
         should_save_preds = True,
         save_path='archive_labels',
+        orig_size= st.session_state['orig_size']
     )
     result_filename = f"{Path(st.session_state['uploaded_file'].name).stem}_results.zip"
     save_directory_as_archive(
@@ -219,8 +225,9 @@ def main():
 
         st.session_state['should_use_sahi'] = st.session_state['model_info'][model_name_option]['sahi']
         st.session_state['sahi_res'] = st.session_state['model_info'][model_name_option]['sahi_res']
+        # st.session_state['orig_size'] =  st.session_state['model_info'][model_name_option]['mixed_inf']
 
-
+        st.session_state['orig_size'] = st.checkbox('Инференс в исходном разрешении', value=True)
 
         st.button('Очистить хранилище',
                   help="Очищает хранилище",

@@ -237,7 +237,8 @@ def predict_image_directory(
         should_save_preds=True,
         should_save_visualisation=False,
         save_path='.',
-        slice_height=1280, slice_width=1280):
+        slice_height=1280, slice_width=1280,
+        orig_size = True,):
     
     shutil.rmtree(save_path, ignore_errors=True)
     os.makedirs(save_path, exist_ok=True)
@@ -247,6 +248,15 @@ def predict_image_directory(
     for path in Path(image_dir).iterdir():
         if path.is_file():
             image = Image.open(path)
+            
+            if orig_size:
+                width, height = image.size
+                arg = int(max(width, height))
+                if arg > 1280 and arg <= 2560:
+                    detection_model.image_size = arg
+                elif arg>2560:
+                    detection_model.image_size = 2560
+                
             if sahi:
                 result_sahi = get_sliced_prediction(
                     image,
@@ -265,8 +275,8 @@ def predict_image_directory(
                 )
             result_yolo = get_yolo_result(result_sahi, convert_category_keys(detection_model.category_mapping))
             if should_save_preds:
-                result_yolo.save_txt(Path(save_path, path.stem).with_suffix('.txt'))
-
+                result_yolo.save_txt(Path(save_path, '.'.join([f'{path.stem}', 'txt'])))
+                
 def predict_video(
         detection_model,
         video_path,
@@ -288,12 +298,15 @@ def predict_video(
     fps = vidcap.get(cv2.CAP_PROP_FPS)
     width  = vidcap.get(cv2.CAP_PROP_FRAME_WIDTH)
     height = vidcap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-
     if orig_size:
-        detection_model.image_size = int(max(width, height))
-
+        arg = int(max(width, height))
+        if arg > 1600 and arg <= 2560:
+            detection_model.image_size = arg
+        elif arg >= 2560:
+            detection_model.image_size = 2560
+            
     if should_save_video:
-        fourcc = cv2.VideoWriter_fourcc(*'avc1')
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         output = cv2.VideoWriter(save_filename, fourcc, fps,(int(width),int(height)))
 
     # pred_timeline = dict(zip(
@@ -390,6 +403,3 @@ def predict_video(
     timeline_items, start_timestamp = finalize_timeline_data(pred_timeline, fps)
 
     return results_yolo, timeline_items, start_timestamp
-
-
-
