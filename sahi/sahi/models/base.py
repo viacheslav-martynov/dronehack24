@@ -22,9 +22,9 @@ class DetectionModel:
         category_remapping: Optional[Dict] = None,
         load_at_init: bool = True,
         image_size: int = None,
-        agnostic_nms: bool = False,
+        agnostic_nms: bool = True,
         augment: bool = True,
-        iou: float = 0.45,
+        iou: float = 0.15,
     ):
         """
         Init object detection/instance segmentation model.

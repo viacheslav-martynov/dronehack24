@@ -41,10 +41,11 @@ def on_more_click(show_more, idx):
 def on_less_click(show_more, idx):
     show_more[idx] = False
 
-def get_model(model_type, checkpoint, confidence_threshold, device, should_augment):
+def get_detector_model(detector_model_type, detector_checkpoint, confidence_threshold, device, should_augment):
+    #print(detector_checkpoint)
     return AutoDetectionModel.from_pretrained(
-                model_type=model_type,
-                model_path=checkpoint,
+                model_type=detector_model_type,
+                model_path=detector_checkpoint,
                 confidence_threshold=confidence_threshold,
                 device=device,
                 augment=should_augment,
@@ -66,6 +67,7 @@ def init_session():
         st.session_state['latest_loaded_image'] = None
         st.session_state['latest_loaded_video'] = None
         st.session_state['latest_loaded_archive'] = None
+        st.session_state['orig_size'] = True
 
     if 'timeline' not in st.session_state:
         st.session_state['timeline'] = None
@@ -81,15 +83,27 @@ def init_session():
 
     if 'model' not in st.session_state:
         default_model_key = list(st.session_state['model_info'].keys())[0]
-        st.session_state['model'] = AutoDetectionModel.from_pretrained(
-                model_type=st.session_state['model_info'][default_model_key]['model_type'],
-                model_path=st.session_state['model_info'][default_model_key]['checkpoint'],
+        st.session_state['detector_model'] = get_detector_model(
+                detector_model_type=st.session_state['model_info'][default_model_key]['model_type'],
+                detector_checkpoint=st.session_state['model_info'][default_model_key]['checkpoint'],
                 confidence_threshold=0.25,
                 device='cuda',
-                augment=st.session_state['model_info'][default_model_key]['augment'],
-                agnostic_nms=True)
+                should_augment=st.session_state['model_info'][default_model_key]['augment']
+        )
+
+        if 'classifier_checkpoint' in st.session_state['model_info'][default_model_key]:
+
+            st.session_state['classifier_model'] = torch.load(
+                st.session_state['model_info'][default_model_key]['classifier_checkpoint'],
+                map_location='cuda'
+            )
+            st.session_state['classifier_model'].eval()
+        else: 
+            st.session_state['classifier_model'] = None
+
         st.session_state['should_use_sahi'] = st.session_state['model_info'][default_model_key]['sahi']
         st.session_state['sahi_res'] = st.session_state['model_info'][default_model_key]['sahi_res']
+        # st.session_state['orig_size'] =  st.session_state['model_info'][default_model_key]['mixed_inf']
 
 def display_player(container, start_timestamp, timeline, video_bytes):
     if timeline is None:
@@ -114,12 +128,15 @@ def process_video():
 
     t1 = time.time()
     results_yolo, timeline_items, start_timestamp = predict_video(
-        st.session_state['model'],
+        st.session_state['detector_model'],
         'temp.mp4',
         sahi=st.session_state['should_use_sahi'],
         slice_height=st.session_state['sahi_res'],
         slice_width=st.session_state['sahi_res'],
-        save_filename='pred.mp4')
+        save_filename='pred.mp4',
+        classifier_model=st.session_state['classifier_model'],
+        orig_size= st.session_state['orig_size']
+        )
     t2= time.time()
     elapsed_time = t2-t1
     processed_video_bytes = read_video_bytes('pred.mp4')
@@ -134,11 +151,12 @@ def process_image_archive():
         z.extractall("temp_archive")
     images_dir = Path("temp_archive")
     predict_image_directory(
-        detection_model = st.session_state['model'],
+        detection_model = st.session_state['detector_model'],
         image_dir = images_dir,
         sahi = False,
         should_save_preds = True,
         save_path='archive_labels',
+        orig_size= st.session_state['orig_size']
     )
     result_filename = f"{Path(st.session_state['uploaded_file'].name).stem}_results.zip"
     save_directory_as_archive(
@@ -168,16 +186,31 @@ def main():
         
         confidence_threshold = st.slider("Порог уверенности", min_value=0.1, max_value=1., step=0.05, value=0.25)
 
-        st.session_state['model'] = get_model(
-            model_type=st.session_state['model_info'][model_name_option]['model_type'],
-            checkpoint=st.session_state['model_info'][model_name_option]['checkpoint'],
+        st.session_state['detector_model'] = get_detector_model(
+            detector_model_type=st.session_state['model_info'][model_name_option]['model_type'],
+            detector_checkpoint=st.session_state['model_info'][model_name_option]['checkpoint'],
             confidence_threshold=confidence_threshold,
             device='cuda',
             should_augment=st.session_state['model_info'][model_name_option]['augment'],
         )
 
+        if 'classifier_checkpoint' in st.session_state['model_info'][model_name_option]:
+            st.text('* Не используйте модель \nBaseline+TTA+classifier для \nподсчета метрик и детекции \nна видео. Она загружена \nкак подтверждение проделанной \nработы, но лучший результат \nона не дает')
+
+
+            st.session_state['classifier_model'] = torch.load(
+                st.session_state['model_info'][model_name_option]['classifier_checkpoint'],
+                map_location='cuda'
+            )
+            st.session_state['classifier_model'].eval()
+        else: 
+            st.session_state['classifier_model'] = None
+
         st.session_state['should_use_sahi'] = st.session_state['model_info'][model_name_option]['sahi']
         st.session_state['sahi_res'] = st.session_state['model_info'][model_name_option]['sahi_res']
+        # st.session_state['orig_size'] =  st.session_state['model_info'][model_name_option]['mixed_inf']
+
+        st.session_state['orig_size'] = st.checkbox('Инференс в исходном разрешении', value=True)
 
         st.button('Очистить хранилище',
                   help="Очищает хранилище",
