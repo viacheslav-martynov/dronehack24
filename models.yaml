@@ -1,29 +1,29 @@
 Baseline:
     model_type : 'yolov8'
-    checkpoint : 'models/baseline.pt'
+    checkpoint : 'models/baseline_upd.pt'
     sahi : False
     augment : False
     sahi_res : 1280
 
 Baseline+TTA:
     model_type : 'yolov8'
-    checkpoint : 'models/baseline.pt'
+    checkpoint : 'models/baseline_upd.pt'
     sahi : False
     augment : True
     sahi_res : 1280
 
 Baseline+TTA+SAHI:
     model_type : 'yolov8'
-    checkpoint : 'models/baseline.pt'
+    checkpoint : 'models/baseline_upd.pt'
     sahi : True
     augment : True
     sahi_res : 1280
 
 Baseline+TTA+classifier*:
     model_type : 'yolov8'
-    checkpoint : 'models/baseline.pt'
+    checkpoint : 'models/baseline_upd.pt'
     sahi : False
     augment : True
     sahi_res : 1280
-    classifier_type: 'resnet14t'
+    classifier_type: 'mobilenetv3_large_100'
     classifier_checkpoint: 'models/classifier.jit.pt'
