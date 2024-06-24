@@ -31,6 +31,11 @@ docker run -d -p 8501:8501 fiziki_i_liriki:v1
 
 После запуска на хост-машине на порте 8501 будет доступен прекрасный пользовательский интерфейс.
 
+Если контейнер не использует ресурсы GPU, проверьте установлен ли у вас [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html). Установите его и запустите контейнер командой:
+
+```bash
+docker run -d -p 8501:8501 --gpus=all fiziki_i_liriki:v1
+```
 
 ### Кроме того, можно запустить в виртуальной среде
 
